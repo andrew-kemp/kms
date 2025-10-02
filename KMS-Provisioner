@@ -1,0 +1,459 @@
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+function Get-SafeName($name) {
+    # Remove all non-alphanumeric (except space), replace spaces with underscores for library URLs
+    $safe = $name -replace '[^a-zA-Z0-9 ]', ''
+    return ($safe -replace ' ', '_')
+}
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "KMS Provisioner"
+$form.Size = "1065,950"
+$form.StartPosition = "CenterScreen"
+
+$sectionFont = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+$labelFont = New-Object System.Drawing.Font("Segoe UI", 10)
+$inputFont = New-Object System.Drawing.Font("Segoe UI", 10)
+$radioFont = New-Object System.Drawing.Font("Segoe UI", 10)
+
+# --- Certificate Group ---
+$grpCert = New-Object System.Windows.Forms.GroupBox
+$grpCert.Text = "Certificate Options"
+$grpCert.Location = "10, 10"
+$grpCert.Size = "1045, 110"
+$form.Controls.Add($grpCert)
+
+$rbExistingCert = New-Object System.Windows.Forms.RadioButton
+$rbExistingCert.Text = "Use Existing Certificate"
+$rbExistingCert.Location = "15,25"
+$rbExistingCert.Size = "180,25"
+$rbExistingCert.Checked = $true
+$rbExistingCert.Font = $radioFont
+
+$rbNewCert = New-Object System.Windows.Forms.RadioButton
+$rbNewCert.Text = "Create New Certificate"
+$rbNewCert.Location = "220,25"
+$rbNewCert.Size = "180,25"
+$rbNewCert.Font = $radioFont
+
+$lblCertPath = New-Object System.Windows.Forms.Label
+$lblCertPath.Text = "Certificate Path (.pfx):"
+$lblCertPath.Location = "15,55"
+$lblCertPath.Size = "150,22"
+$lblCertPath.Font = $labelFont
+
+$txtCertPath = New-Object System.Windows.Forms.TextBox
+$txtCertPath.Location = "170,55"
+$txtCertPath.Size = "600,22"
+$txtCertPath.Font = $inputFont
+
+$btnBrowseCert = New-Object System.Windows.Forms.Button
+$btnBrowseCert.Text = "Browse"
+$btnBrowseCert.Location = "780,55"
+$btnBrowseCert.Size = "80,22"
+$btnBrowseCert.Font = $inputFont
+
+$lblCertPass = New-Object System.Windows.Forms.Label
+$lblCertPass.Text = "Certificate Password:"
+$lblCertPass.Location = "15,80"
+$lblCertPass.Size = "150,22"
+$lblCertPass.Font = $labelFont
+
+$txtCertPass = New-Object System.Windows.Forms.TextBox
+$txtCertPass.Location = "170,80"
+$txtCertPass.Size = "180,22"
+$txtCertPass.Font = $inputFont
+$txtCertPass.UseSystemPasswordChar = $true
+
+$lblCertCN = New-Object System.Windows.Forms.Label
+$lblCertCN.Text = "Certificate CN (Subject):"
+$lblCertCN.Location = "370,80"
+$lblCertCN.Size = "160,22"
+$lblCertCN.Font = $labelFont
+
+$txtCertCN = New-Object System.Windows.Forms.TextBox
+$txtCertCN.Location = "540,80"
+$txtCertCN.Size = "180,22"
+$txtCertCN.Font = $inputFont
+
+$btnCreateCert = New-Object System.Windows.Forms.Button
+$btnCreateCert.Text = "Create Certificate"
+$btnCreateCert.Location = "740,80"
+$btnCreateCert.Size = "120,22"
+$btnCreateCert.Font = $inputFont
+$btnCreateCert.Enabled = $false
+
+$grpCert.Controls.AddRange(@(
+    $rbExistingCert, $rbNewCert, $lblCertPath, $txtCertPath, $btnBrowseCert, $lblCertPass, $txtCertPass, $lblCertCN, $txtCertCN, $btnCreateCert
+))
+
+# --- KMS Site/App Group ---
+$grpKMS = New-Object System.Windows.Forms.GroupBox
+$grpKMS.Text = "KMS Site  App Registration"
+$grpKMS.Location = "10, 130"
+$grpKMS.Size = "1045, 400"
+$form.Controls.Add($grpKMS)
+
+$fields = @(
+    @{L="Tenant ID";         N="txtTenant";        D="11016236-4dbc-43a6-8310-be803173fc43";   Y=30},
+    @{L="Tenant Name";       N="txtTenantName";    D="kempy";                                 Y=60},
+    @{L="App/Client ID";     N="txtClientId";      D="1525fc4b-5873-49e3-b0ca-aeb47fee4abd";   Y=90},
+    @{L="Site Title";        N="txtSiteTitle";     D="Knowledge Management System";            Y=120},
+    @{L="Site short name";   N="txtSiteShort";     D="kms";                                   Y=150},
+    @{L="Site Owner Email";  N="txtOwnerEmail";    D="andrew@kemponline.co.uk";               Y=180},
+    @{L="Approver Email(s) (comma separated)"; N="txtApproverEmails"; D="andrew@kemponline.co.uk"; Y=210}
+)
+$controls = @{}
+foreach ($f in $fields) {
+    $lbl = New-Object System.Windows.Forms.Label
+    $lbl.Text = $f.L
+    $lbl.Location = "15,$($f.Y)"
+    $lbl.Size = "230,22"
+    $lbl.Font = $labelFont
+    $grpKMS.Controls.Add($lbl)
+
+    $txt = New-Object System.Windows.Forms.TextBox
+    $txt.Name = $f.N
+    $txt.Location = "250,$($f.Y)"
+    $txt.Size = "770,22"
+    $txt.Font = $inputFont
+    $txt.Text = $f.D
+    $controls[$f.N] = $txt
+    $grpKMS.Controls.Add($txt)
+}
+
+# --- Additional Approvers field (multi-line) ---
+$lblAdditionalApprovers = New-Object System.Windows.Forms.Label
+$lblAdditionalApprovers.Text = "Additional Approvers (comma separated):"
+$lblAdditionalApprovers.Location = "15,240"
+$lblAdditionalApprovers.Size = "230,32"
+$lblAdditionalApprovers.Font = $labelFont
+$grpKMS.Controls.Add($lblAdditionalApprovers)
+
+$txtAdditionalApprovers = New-Object System.Windows.Forms.TextBox
+$txtAdditionalApprovers.Multiline = $true
+$txtAdditionalApprovers.Location = "250,240"
+$txtAdditionalApprovers.Size = "770,32"
+$txtAdditionalApprovers.Font = $inputFont
+$grpKMS.Controls.Add($txtAdditionalApprovers)
+
+# Departments label, top-aligned
+$lblDept = New-Object System.Windows.Forms.Label
+$lblDept.Text = "Departments:"
+$lblDept.Location = "15,280"
+$lblDept.Size = "120,22"
+$lblDept.Font = $labelFont
+$grpKMS.Controls.Add($lblDept)
+
+# Departments ListBox, tall and wide
+$lstDept = New-Object System.Windows.Forms.ListBox
+$lstDept.Location = "250,280"
+$lstDept.Size = "250,100"
+$lstDept.Font = $inputFont
+$lstDept.SelectionMode = "One"
+@(
+    "Operations",
+    "Commercial",
+    "Finance",
+    "People & Talent",
+    "Engineering & Development",
+    "IT",
+    "GSS"
+) | ForEach-Object { $lstDept.Items.Add($_) }
+$grpKMS.Controls.Add($lstDept)
+
+# Departments Add TextBox (beside ListBox, vertically centered)
+$txtDeptAdd = New-Object System.Windows.Forms.TextBox
+$txtDeptAdd.Location = "520,280"
+$txtDeptAdd.Size = "200,22"
+$txtDeptAdd.Font = $inputFont
+$grpKMS.Controls.Add($txtDeptAdd)
+
+# Add/Remove buttons (right of TextBox)
+$btnDeptAdd = New-Object System.Windows.Forms.Button
+$btnDeptAdd.Text = "Add"
+$btnDeptAdd.Location = "730,280"
+$btnDeptAdd.Size = "60,22"
+$btnDeptAdd.Font = $inputFont
+$grpKMS.Controls.Add($btnDeptAdd)
+
+$btnDeptRemove = New-Object System.Windows.Forms.Button
+$btnDeptRemove.Text = "Remove"
+$btnDeptRemove.Location = "800,280"
+$btnDeptRemove.Size = "80,22"
+$btnDeptRemove.Font = $inputFont
+$grpKMS.Controls.Add($btnDeptRemove)
+
+# --- Require Check In/Check Out Checkbox ---
+$chkRequireCheckout = New-Object System.Windows.Forms.CheckBox
+$chkRequireCheckout.Text = "Require Check In/Check Out"
+$chkRequireCheckout.Location = "250,400"
+$chkRequireCheckout.Size = "250,22"
+$chkRequireCheckout.Font = $labelFont
+$chkRequireCheckout.Checked = $true
+$grpKMS.Controls.Add($chkRequireCheckout)
+
+# --- Provision Button ---
+$btnProvision = New-Object System.Windows.Forms.Button
+$btnProvision.Text = "Provision Knowledge Management System"
+$btnProvision.Font = $sectionFont
+$btnProvision.Width = 700
+$btnProvision.Height = 40
+$btnProvision.Location = New-Object System.Drawing.Point([int](($form.ClientSize.Width - $btnProvision.Width) / 2), 540)
+$btnProvision.Enabled = $true
+$form.Controls.Add($btnProvision)
+
+# --- Status Box ---
+$txtStatus = New-Object System.Windows.Forms.TextBox
+$txtStatus.Multiline = $true
+$txtStatus.ScrollBars = "Vertical"
+$txtStatus.Location = "10,600"
+$txtStatus.Size = "1045,320"
+$txtStatus.Font = New-Object System.Drawing.Font("Consolas",9)
+$txtStatus.ReadOnly = $true
+$form.Controls.Add($txtStatus)
+
+# --- GUI Logic: add/remove departments ---
+$btnDeptAdd.Add_Click({
+    $newDept = $txtDeptAdd.Text.Trim()
+    if ($newDept -and -not $lstDept.Items.Contains($newDept)) {
+        $lstDept.Items.Add($newDept)
+        $txtDeptAdd.Text = ""
+    }
+})
+$btnDeptRemove.Add_Click({
+    $idx = $lstDept.SelectedIndex
+    if ($idx -ge 0) { $lstDept.Items.RemoveAt($idx) }
+})
+
+# --- Cert Mode logic ---
+function SetCertMode {
+    param($mode)
+    if ($mode -eq "existing") {
+        $btnCreateCert.Enabled = $false
+        $lblCertCN.Enabled = $false
+        $txtCertCN.Enabled = $false
+        $txtCertPath.Enabled = $true
+        $btnBrowseCert.Enabled = $true
+        $txtCertPass.Enabled = $true
+        $grpKMS.Enabled = $true
+        $btnProvision.Enabled = $true
+    } elseif ($mode -eq "new") {
+        $btnCreateCert.Enabled = $true
+        $lblCertCN.Enabled = $true
+        $txtCertCN.Enabled = $true
+        $txtCertPath.Enabled = $true
+        $btnBrowseCert.Enabled = $true
+        $txtCertPass.Enabled = $true
+        $grpKMS.Enabled = $false
+        $btnProvision.Enabled = $false
+    }
+}
+$rbExistingCert.Add_Click({ SetCertMode "existing" })
+$rbNewCert.Add_Click({ SetCertMode "new" })
+SetCertMode "existing"
+
+$btnBrowseCert.Add_Click({
+    $dialog = New-Object System.Windows.Forms.OpenFileDialog
+    $dialog.Filter = "PFX files (*.pfx)|*.pfx|All files (*.*)|*.*"
+    if ($dialog.ShowDialog() -eq "OK") { $txtCertPath.Text = $dialog.FileName }
+})
+
+$btnCreateCert.Add_Click({
+    $txtStatus.Text = ""
+    $certPath = $txtCertPath.Text
+    $certPass = $txtCertPass.Text
+    $certCN = $txtCertCN.Text
+    try {
+        $SecurePassword = ConvertTo-SecureString $certPass -AsPlainText -Force
+        $Cert = New-SelfSignedCertificate -Type Custom -Subject $certCN -KeySpec Signature `
+            -KeyExportPolicy Exportable -HashAlgorithm SHA256 -KeyLength 2048 -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(2)
+        Export-PfxCertificate -Cert $Cert -FilePath $certPath -Password $SecurePassword
+        $cerPath = [System.IO.Path]::ChangeExtension($certPath,".cer")
+        Export-Certificate -Cert $Cert -FilePath $cerPath
+        $txtStatus.AppendText("Certificate created and exported to $certPath`r`n")
+        $txtStatus.AppendText("Upload $cerPath to your Azure App Registration > Certificates & Secrets.`r`n")
+        $txtStatus.AppendText("Once done, continue below.`r`n")
+        $rbExistingCert.Checked = $true
+        SetCertMode "existing"
+        $rbNewCert.Enabled = $false
+    } catch {
+        $txtStatus.AppendText("Error creating certificate: $_`r`n")
+    }
+})
+
+# --- Provision Logic ---
+$btnProvision.Add_Click({
+    $txtStatus.Text = ""
+    $Tenant = $controls["txtTenant"].Text
+    $TenantName = $controls["txtTenantName"].Text
+    $ClientId = $controls["txtClientId"].Text
+    $CertificatePath = $txtCertPath.Text
+    $CertPassword = $txtCertPass.Text
+    $SiteTitle = $controls["txtSiteTitle"].Text
+    $SiteShort = $controls["txtSiteShort"].Text
+    $OwnerEmail = $controls["txtOwnerEmail"].Text
+    $ForceCheckout = $chkRequireCheckout.Checked
+
+    # Collect all Approver emails from both fields, deduplicate and clean
+    $RawApproverEmails = $controls["txtApproverEmails"].Text
+    $AdditionalApprovers = $txtAdditionalApprovers.Text
+    $ApproverEmails = @()
+    ($RawApproverEmails + "," + $AdditionalApprovers).Split(',') | ForEach-Object {
+        $email = $_.Trim()
+        if ($email -and -not $ApproverEmails.Contains($email)) { $ApproverEmails += $email }
+    }
+
+    $Departments = @()
+    for ($i=0; $i -lt $lstDept.Items.Count; $i++) { $Departments += $lstDept.Items[$i] }
+    $SiteUrl = "https://$TenantName.sharepoint.com/sites/$SiteShort"
+    $AdminUrl = "https://$TenantName-admin.sharepoint.com"
+
+    $txtStatus.AppendText("Connecting to SharePoint...`r`n")
+    try {
+        Import-Module PnP.PowerShell -Force
+        Connect-PnPOnline -Url $AdminUrl -ClientId $ClientId -Tenant $Tenant -CertificatePath $CertificatePath -CertificatePassword (ConvertTo-SecureString $CertPassword -AsPlainText -Force)
+        $txtStatus.AppendText("Connected to $AdminUrl`r`n")
+        $site = Get-PnPTenantSite -Url $SiteUrl -ErrorAction SilentlyContinue
+        if ($site) {
+            $dialogResult = [System.Windows.Forms.MessageBox]::Show(
+                "The site $SiteUrl already exists.`nDo you want to permanently delete it and ALL contents? This cannot be undone.",
+                "Delete Site Confirmation",
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
+            if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                $txtStatus.AppendText("Deleting site $SiteUrl ...`r`n")
+                Remove-PnPTenantSite -Url $SiteUrl -Force -SkipRecycleBin
+                $attempt = 0
+                do {
+                    Start-Sleep -Seconds 10
+                    $site = Get-PnPTenantSite -Url $SiteUrl -ErrorAction SilentlyContinue
+                    $attempt++
+                } while ($site -and $attempt -lt 20)
+                if ($site) {
+                    $txtStatus.AppendText("Site deletion not yet complete. Please try again later.`r`n")
+                    return
+                } else {
+                    $txtStatus.AppendText("Site $SiteUrl deleted.`r`n")
+                }
+            } else {
+                $txtStatus.AppendText("Provisioning cancelled by user.`r`n")
+                return
+            }
+        }
+        # Now create the new site
+        $txtStatus.AppendText("Creating site $SiteUrl...`r`n")
+        New-PnPTenantSite -Title $SiteTitle -Url $SiteUrl -Owner $OwnerEmail -TimeZone 2 -Template "STS#3"
+        $maxAttempts = 9; $attempt = 1
+        do {
+            Start-Sleep -Seconds 10
+            $site = Get-PnPTenantSite -Url $SiteUrl -ErrorAction SilentlyContinue
+            $attempt++
+        } while ((-not $site) -and ($attempt -le $maxAttempts))
+        if (-not $site) {
+            $txtStatus.AppendText("Site creation timed out.`r`n")
+            Disconnect-PnPOnline
+            return
+        }
+        $txtStatus.AppendText("Site created and available.`r`n")
+        Disconnect-PnPOnline
+        Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Tenant $Tenant -CertificatePath $CertificatePath -CertificatePassword (ConvertTo-SecureString $CertPassword -AsPlainText -Force)
+
+        # --- Create navigation header if not present ---
+        $navHeader = Get-PnPNavigationNode -Location "QuickLaunch" | Where-Object { $_.Title -eq "Department Libraries" }
+        if (-not $navHeader) {
+            $navHeader = Add-PnPNavigationNode -Title "Department Libraries" -Location "QuickLaunch" -Url ""
+        }
+
+        # --- For each department, create a library, secure it, add columns, and add to navigation ---
+        foreach ($dept in $Departments) {
+            $libDisplayName = "$dept Documents"
+            $libSafeName = Get-SafeName($dept) + "Documents"
+
+            $lib = Get-PnPList -Identity $libSafeName -ErrorAction SilentlyContinue
+            if (-not $lib) {
+                $txtStatus.AppendText("Creating library: $libDisplayName`r`n")
+                New-PnPList -Title $libDisplayName -Url $libSafeName -Template DocumentLibrary
+                Start-Sleep -Seconds 2
+            } else {
+                $txtStatus.AppendText("Library exists: $libDisplayName`r`n")
+            }
+
+            # Break permission inheritance and clear permissions
+            Set-PnPList -Identity $libSafeName -BreakRoleInheritance:$true -CopyRoleAssignments:$false -ClearSubscopes:$true
+
+            # Remove all groups except Owners using CSOM
+            $ownersGroup = Get-PnPGroup -AssociatedOwnerGroup
+            $allGroups = Get-PnPGroup
+            $list = Get-PnPList -Identity $libSafeName
+            $roleAssignments = Get-PnPProperty -ClientObject $list -Property RoleAssignments
+
+            foreach ($group in $allGroups) {
+                if ($group.Title -ne $ownersGroup.Title) {
+                    $assignment = $roleAssignments | Where-Object { $_.Member.Title -eq $group.Title }
+                    if ($assignment) {
+                        $list.RoleAssignments.GetByPrincipal($group).DeleteObject()
+                    }
+                }
+            }
+            Invoke-PnPQuery
+
+            # Grant Owners Group Full Control
+            Set-PnPListPermission -Identity $libSafeName -Group $ownersGroup.Title -AddRole "Full Control"
+
+            # -- Add Required Columns --
+            # Add 'Owner' field (Person), required
+            if (-not (Get-PnPField -List $libSafeName -Identity "Owner" -ErrorAction SilentlyContinue)) {
+                Add-PnPField -List $libSafeName -DisplayName "Owner" -InternalName "Owner" -Type User -AddToDefaultView
+                Set-PnPField -List $libSafeName -Identity "Owner" -Values @{Required=$true}
+            }
+            # Add 'Next Review Date' (Date), optional
+            if (-not (Get-PnPField -List $libSafeName -Identity "NextReviewDate" -ErrorAction SilentlyContinue)) {
+                Add-PnPField -List $libSafeName -DisplayName "Next Review Date" -InternalName "NextReviewDate" -Type DateTime -AddToDefaultView
+            }
+            # Add 'Document Type' (Choice), required
+            $docTypeChoices = @("Policy","Procedure","Training","Lessons Learned","Client")
+            if (-not (Get-PnPField -List $libSafeName -Identity "DocumentType" -ErrorAction SilentlyContinue)) {
+                Add-PnPField -List $libSafeName -DisplayName "Document Type" -InternalName "DocumentType" -Type Choice -Choices $docTypeChoices -AddToDefaultView
+                Set-PnPField -List $libSafeName -Identity "DocumentType" -Values @{Required=$true}
+            }
+
+            # Enable content approval
+            Set-PnPList -Identity $libSafeName -EnableModeration $true
+
+            # Require check out/check in
+            Set-PnPList -Identity $libSafeName -ForceCheckout $ForceCheckout
+
+            # Add Library to navigation under "Department Libraries"
+            $libUrl = "$SiteUrl/$libSafeName/Forms/AllItems.aspx"
+            $existingNav = Get-PnPNavigationNode -Location "QuickLaunch" | Where-Object { $_.Title -eq $libDisplayName }
+            if (-not $existingNav) {
+                Add-PnPNavigationNode -Title $libDisplayName -Url $libUrl -Location "QuickLaunch" -Parent $navHeader.Id
+            }
+
+            $txtStatus.AppendText("Secured and linked: $libDisplayName`r`n")
+
+            # Set the default view columns
+            try {
+                $defaultFields = @("FileLeafRef", "_ModerationStatus", "Department", "Owner", "DocumentType", "NextReviewDate", "Created", "Modified")
+                $defaultView = Get-PnPView -List $libSafeName -Default
+                Set-PnPView -List $libSafeName -Identity $defaultView.Id -Fields $defaultFields
+                $txtStatus.AppendText("Set default view for $libDisplayName (Name, Approval Status, Department, Owner, Document Type, Next Review Date, Created, Modified)`r`n")
+            } catch {
+                $errMsg = $_.Exception.Message
+                # $txtStatus.AppendText("Could not set view columns for $libDisplayName: " + $errMsg + "`r`n")
+            }
+        }
+
+        $txtStatus.AppendText("Knowledge Management System provisioned!`r`n")
+        $txtStatus.AppendText("Open your KMS site here: $SiteUrl`r`n")
+        $txtStatus.AppendText("Approvers specified: $($ApproverEmails -join ', ')`r`n")
+        $txtStatus.AppendText("NOTE: To enable these users as approvers, grant them 'Approve' permissions in the relevant libraries after provisioning.`r`n")
+    } catch {
+        $txtStatus.AppendText("Error: $_`r`n")
+    }
+})
+
+[void]$form.ShowDialog()
